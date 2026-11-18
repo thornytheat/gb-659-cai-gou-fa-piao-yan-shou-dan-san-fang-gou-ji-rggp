@@ -40,3 +40,15 @@
 
 - 不处理外币汇兑，样例与输出均为人民币。
 
+
+## 匹配与批次深化（PM-2026.11）
+
+| TRAP | 现象 | 朴素实现会怎样 | 本项目处理 | 处理位置 | 测试 |
+|---|---|---|---|---|---|
+| TRAP-27 | 已核准配对独占验收单 | 新发票永远抢不到验收单或被强行覆盖 | 默认优先多结算，必要时把旧票挪到等额替代组；无法替代时保留原配对并给出 `RECEIPT_HELD_BY_APPROVED` | `app/modules/m5_matching/allocator.py` | `tests/test_allocation.py::test_move_settles_both_when_approved_has_equal_replacements` |
+| TRAP-28 | 同一张验收单被两张发票使用 | 金额重复计入 | 分配集合互斥，`receipt_usage` 校验重复占用 | `app/modules/m5_matching/allocator.py` `app/modules/m6_batches/compare.py` | `tests/test_allocation.py::test_receipt_is_never_shared_between_invoices` |
+| TRAP-29 | 隔离行偷偷进入匹配 | 冲突单据也参与组合 | 只使用 M1 `accepted` 行，隔离行保留原因码与原始行号 | `app/pipeline.py` | `tests/test_allocation.py::test_quarantined_document_never_enters_matching` |
+| TRAP-30 | 批次按发票面值对账 | 配对金额与账面不符仍然平衡 | 差异批次按实际配对金额（验收单金额合计）核对 | `app/modules/m6_batches/compare.py` | `tests/test_allocation.py::test_reconcile_uses_actual_pairing_amounts` |
+| TRAP-31 | 同批重跑重复占用验收单 | 每次运行都新增配对 | 输入摘要作为 run_id，重跑复用批次与配对明细 | `app/store.py` `app/modules/m6_batches/service.py` | `tests/test_allocation.py::test_batch_rerun_reuses_allocations` |
+
+策略：`policy="settle"`（默认）在“已核准发票仍结算”的前提下最大化结算张数，再最大化原样保留的核准配对；`policy="stable"` 把核准配对当硬约束，新票只能使用剩余验收单。

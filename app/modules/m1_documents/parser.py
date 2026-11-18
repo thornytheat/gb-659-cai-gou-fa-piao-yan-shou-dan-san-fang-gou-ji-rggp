@@ -1,8 +1,9 @@
 REQUIRED = ("doc_type", "doc_no", "sku", "qty", "amount", "tax_rate")
 
-def parse_documents(rows: list[dict]) -> tuple[list[dict], list[dict]]:
+def parse_documents(rows: list[dict], start_line: int = 2) -> tuple[list[dict], list[dict]]:
+    """按物理行采信单据；CSV 数据从第 2 行开始，内存载荷从第 1 行开始。"""
     accepted, bad, seen = [], [], {}
-    for line_no, row in enumerate(rows, 2):
+    for line_no, row in enumerate(rows, start_line):
         missing = [key for key in REQUIRED if not str(row.get(key, "")).strip()]
         if missing:
             bad.append({"line_no": line_no, "reason_code": "EMPTY_VALUE", "raw": row})
@@ -17,5 +18,10 @@ def parse_documents(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     return accepted, bad
 
 def complete_tail(text: str) -> bool:
-    return not text or text.endswith("\n")
+    """输入尾部必须落在记录边界上：未换行的残行、未闭合的引号字段都算截断。"""
+    if not text:
+        return True
+    if not text.endswith("\n"):
+        return False
+    return text.count('"') % 2 == 0
 

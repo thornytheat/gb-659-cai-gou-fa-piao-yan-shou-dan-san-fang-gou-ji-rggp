@@ -1,27 +1,47 @@
 {% extends "base.html" %}
 {% block content %}
+{% set totals = result.totals %}
 <section class="kpis">
-  <div class="kpi"><b>含税额</b><strong>4</strong><small>条</small></div>
-  <div class="kpi"><b>通过</b><strong>2</strong><small>条</small></div>
-  <div class="kpi"><b>隔离</b><strong>2</strong><small>条</small></div>
-  <div class="kpi"><b>规则版</b><strong>1.5</strong><small>v</small></div>
+  <div class="kpi"><b>已结算发票</b><strong>{{ totals.settled_invoices }}</strong><small>张</small></div>
+  <div class="kpi"><b>待处理发票</b><strong>{{ totals.pending_invoices }}</strong><small>张</small></div>
+  <div class="kpi"><b>未开票验收</b><strong>{{ totals.uninvoiced_receipts }}</strong><small>张</small></div>
+  <div class="kpi"><b>配对金额</b><strong>{{ totals.matched_receipt_amount }}</strong><small>CNY</small></div>
 </section>
 <div class="grid grid--quad">
   <section class="panel">
-    <div class="panel__head"><h2>多对多匹配</h2><span class="state state--ok">通过</span></div>
+    <div class="panel__head"><h2>已配对</h2><span class="state state--ok">验收单互斥</span></div>
     <div class="panel__body panel__body--scroll">
-      <table class="ledger"><thead><tr><th>序号</th><th>业务键</th><th>状态</th><th class="num">值</th></tr></thead>
-      <tbody>{% for row in rows %}<tr><td class="num">{{ loop.index }}</td><td>{{ row.key }}</td><td>{{ row.status }}</td><td class="num">{{ row.value }}</td></tr>{% endfor %}</tbody></table>
+      <table class="ledger">
+        <thead><tr><th>发票</th><th>验收单</th><th class="num">配对金额</th><th>处理</th></tr></thead>
+        <tbody>{% for row in tabs[0].rows %}<tr><td>{{ row.a }}</td><td>{{ row.b }}</td><td class="num">{{ row.c }}</td><td>{{ row.d }}</td></tr>{% endfor %}</tbody>
+      </table>
     </div>
   </section>
   <section class="panel panel--evidence">
-    <div class="panel__head"><h2>证据</h2><span class="panel__meta">6 条</span></div>
-    <div class="panel__body"><div class="evidence"><b>RUN-659-5</b><span>LINE 6</span><code>/api/matches/solve</code></div><pre id="result">等待运行</pre></div>
+    <div class="panel__head"><h2>证据</h2><span class="panel__meta">{{ result.accepted }} 采信 / {{ result.quarantined|length }} 隔离</span></div>
+    <div class="panel__body"><div class="evidence"><b>配对 {{ result.pairings|length }}</b><span>待处理 {{ result.pending|length }}</span><code>/api/matches/solve</code></div><pre id="result">等待运行</pre></div>
   </section>
-  <section class="panel panel--status">
-    <div class="panel__head"><h2>原因分布</h2><span class="panel__meta">2 类</span></div>
-    <div class="panel__body"><div class="bar"><i style="width:79%"></i></div><div class="legend"><span>采纳 4</span><span>隔离 2</span></div></div>
+</div>
+<div class="grid grid--quad">
+  <section class="panel">
+    <div class="panel__head"><h2>待处理</h2><span class="panel__meta">{{ result.pending|length }} 张</span></div>
+    <div class="panel__body panel__body--scroll">
+      <table class="ledger">
+        <thead><tr><th>发票</th><th>原因</th><th class="num">金额</th><th>候选验收单</th></tr></thead>
+        <tbody>{% for row in tabs[1].rows %}<tr><td>{{ row.a }}</td><td>{{ row.b }}</td><td class="num">{{ row.c }}</td><td>{{ row.d }}</td></tr>
+        {% else %}<tr><td colspan="4">没有待处理发票</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel__head"><h2>未开票验收单</h2><span class="panel__meta">{{ result.uninvoiced|length }} 张</span></div>
+    <div class="panel__body panel__body--scroll">
+      <table class="ledger">
+        <thead><tr><th>验收单</th><th>业务键</th><th class="num">金额</th><th>状态</th></tr></thead>
+        <tbody>{% for row in tabs[2].rows %}<tr><td>{{ row.a }}</td><td>{{ row.b }}</td><td class="num">{{ row.c }}</td><td>{{ row.d }}</td></tr>
+        {% else %}<tr><td colspan="4">全部验收单已配对</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
   </section>
 </div>
 {% endblock %}
-

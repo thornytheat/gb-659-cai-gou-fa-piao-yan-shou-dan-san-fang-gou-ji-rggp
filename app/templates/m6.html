@@ -1,27 +1,62 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="kpis">
-  <div class="kpi"><b>差异项</b><strong>2</strong><small>条</small></div>
-  <div class="kpi"><b>通过</b><strong>0</strong><small>条</small></div>
-  <div class="kpi"><b>隔离</b><strong>3</strong><small>条</small></div>
-  <div class="kpi"><b>规则版</b><strong>1.6</strong><small>v</small></div>
+  <div class="kpi"><b>批次</b><strong>{{ result.run_id if result.run_id else '—' }}</strong><small>{{ '新建' if result.created else '复用' }}</small></div>
+  <div class="kpi"><b>实际配对</b><strong>{{ compare.matched_receipt_amount }}</strong><small>CNY</small></div>
+  <div class="kpi"><b>待处理</b><strong>{{ compare.pending_invoice_amount }}</strong><small>CNY</small></div>
+  <div class="kpi"><b>守恒</b><strong>{{ '是' if compare.balanced else '否' }}</strong><small>对账</small></div>
 </section>
 <div class="grid grid--quad">
   <section class="panel">
-    <div class="panel__head"><h2>差异批次</h2><span class="state state--ok">通过</span></div>
+    <div class="panel__head"><h2>实际配对金额</h2><span class="state {{ 'state--ok' if compare.balanced else 'state--bad' }}">{{ '平衡' if compare.balanced else '差异' }}</span></div>
     <div class="panel__body panel__body--scroll">
-      <table class="ledger"><thead><tr><th>序号</th><th>业务键</th><th>状态</th><th class="num">值</th></tr></thead>
-      <tbody>{% for row in rows %}<tr><td class="num">{{ loop.index }}</td><td>{{ row.key }}</td><td>{{ row.status }}</td><td class="num">{{ row.value }}</td></tr>{% endfor %}</tbody></table>
+      <table class="ledger">
+        <thead><tr><th>发票</th><th>验收单</th><th class="num">配对金额</th><th>处理</th><th class="num">差额</th></tr></thead>
+        <tbody>{% for row in tabs[0].rows %}<tr><td>{{ row.a }}</td><td>{{ row.b }}</td><td class="num">{{ row.c }}</td><td>{{ row.d }}</td><td class="num">{{ row.e }}</td></tr>
+        {% else %}<tr><td colspan="5">本批次没有配对</td></tr>{% endfor %}</tbody>
+      </table>
     </div>
   </section>
   <section class="panel panel--evidence">
-    <div class="panel__head"><h2>证据</h2><span class="panel__meta">7 条</span></div>
-    <div class="panel__body"><div class="evidence"><b>RUN-659-6</b><span>LINE 7</span><code>/api/reconcile</code></div><pre id="result">等待运行</pre></div>
+    <div class="panel__head"><h2>证据</h2><span class="panel__meta">{{ result.run_id }}</span></div>
+    <div class="panel__body"><div class="evidence"><b>{{ result.rule_version }}</b><span>输入 {{ result.input_sha256[:12] }}</span><code>/api/reconcile</code></div><pre id="result">等待运行</pre></div>
   </section>
+</div>
+<div class="grid grid--quad">
+  <section class="panel">
+    <div class="panel__head"><h2>待处理原因</h2><span class="panel__meta">{{ result.pending|length }} 张</span></div>
+    <div class="panel__body panel__body--scroll">
+      <table class="ledger">
+        <thead><tr><th>发票</th><th>原因</th><th class="num">金额</th><th>候选验收单</th></tr></thead>
+        <tbody>{% for row in tabs[1].rows %}<tr><td>{{ row.a }}</td><td>{{ row.b }}</td><td class="num">{{ row.c }}</td><td>{{ row.d }}</td></tr>
+        {% else %}<tr><td colspan="4">没有待处理发票</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel__head"><h2>未开票验收单</h2><span class="panel__meta">{{ result.uninvoiced|length }} 张</span></div>
+    <div class="panel__body panel__body--scroll">
+      <table class="ledger">
+        <thead><tr><th>验收单</th><th>业务键</th><th class="num">金额</th><th>状态</th></tr></thead>
+        <tbody>{% for row in tabs[2].rows %}<tr><td>{{ row.a }}</td><td>{{ row.b }}</td><td class="num">{{ row.c }}</td><td>{{ row.d }}</td></tr>
+        {% else %}<tr><td colspan="4">全部验收单已配对</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<div class="grid grid--quad">
   <section class="panel panel--status">
-    <div class="panel__head"><h2>原因分布</h2><span class="panel__meta">3 类</span></div>
-    <div class="panel__body"><div class="bar"><i style="width:85%"></i></div><div class="legend"><span>采纳 2</span><span>隔离 3</span></div></div>
+    <div class="panel__head"><h2>金额守恒</h2><span class="panel__meta">实际配对金额对账</span></div>
+    <div class="panel__body">
+      <table class="ledger">
+        <thead><tr><th>口径</th><th class="num">基数</th><th class="num">已配对</th><th class="num">未配对</th><th class="num">差异</th></tr></thead>
+        <tbody>
+          <tr><td>验收单</td><td class="num">{{ compare.receipts.received }}</td><td class="num">{{ compare.receipts.invoiced }}</td><td class="num">{{ compare.receipts.uninvoiced }}</td><td class="num">{{ compare.receipts.difference }}</td></tr>
+          <tr><td>发票</td><td class="num">{{ compare.invoices.received }}</td><td class="num">{{ compare.invoices.invoiced }}</td><td class="num">{{ compare.invoices.uninvoiced }}</td><td class="num">{{ compare.invoices.difference }}</td></tr>
+        </tbody>
+      </table>
+      <div class="legend"><span>验收单 {{ compare.receipt_usage.distinct }} 张互斥</span><span>{{ '未发现重复占用' if compare.receipt_usage.unique else '存在重复占用' }}</span></div>
+    </div>
   </section>
 </div>
 {% endblock %}
-
